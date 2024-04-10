@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <br/>
+            {% if messages %}
+                {% if not user.is_authenticated %}
+                    {% for message in messages %}
+                    <div class="alert alert-warning" role="alert">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endif %}
+            
+            <form id="form-question" method="POST" action="{% url 'form_question' %}">
+                {% csrf_token %}
+                <div class="card mb-3" style="background-color: #EAE897; margin-top: 20px;">
+                    <h1 class="card-header text-center" id="form_header">New Form</h1>
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <ul>
+                                    {% for field, error_list in form.errors.items %}
+                                        {% for error in error_list %}
+                                            <li>{{ field|title }}: {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <label>Title: </label>
+                        <div class="mb-3" id="form_title" oninput="formTitle()">
+                            {{ form.form_title }}
+                        </div>
+                        <hr/>
+                        
+                        <div id="additional-fields">
+                            <!-- Buraya JavaScript ile eklenecek alanlar gelecek -->
+                        </div>
+                        
+                        <div style="margin-bottom: 20px; margin-top: 10px;">
+                            <button type="button" id="add-field-btn" class="btn btn-secondary">Add Question</button>
+                        </div>
+
+                        <label>Anonymous:</label>
+                            <input type="radio" name="anonymous" value="anonymous" checked>
+                            <label>Not Anonymous:</label>
+                            <input type="radio" name="anonymous" value="notanonymous" checked>
+                        <div style="margin-top: 15px; margin-bottom: 15px;">
+                        <label>Ask Code</label>
+                        <input type="radio" name="ask_code" value="true" onclick="clearSelection(this)">
+                        </div>             
+                        <div>
+                            <button type="button" id="save-btn" class="btn btn-light">Save</button>
+                        </div>
+                        
+                    </div>
+                </div>
+            </form>
+            <div style="margin-bottom: 200px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function clearSelection(radio) {
+    if (radio.previous) {
+        radio.checked = false;
+        radio.previous = false;
+    } else {
+        radio.previous = true;
+    }
+}
+function formTitle(){
+        let text = document.getElementById("id_form_title").value;
+        if(text){
+            document.getElementById("form_header").textContent = text;
+        }
+        else{
+            document.getElementById("form_header").textContent = "New Form";
+        }
+        
+    }
+    
+document.addEventListener('DOMContentLoaded', function() {
+    var addFieldBtn = document.querySelector('#add-field-btn');
+    var additionalFieldsDiv = document.querySelector('#additional-fields');
+    var typeSelect = document.querySelector('#id_type');
+
+    var newIndex = 0;
+
+    addFieldBtn.addEventListener('click', function() {
+        var newField = document.createElement('div');
+        newField.innerHTML = `
+            <hr>
+            <label>New Question: </label>
+            <input name="new_question_${newIndex}" class="form-control">
+            <br/>
+            <label>Required:</label>
+            <input type="radio" name="required_${newIndex}" value="required" checked>
+            <label>Not Required:</label>
+            <input type="radio" name="required_${newIndex}" value="notrequired" checked>
+            <br/>
+            <br/>
+            <label>New Number: </label>
+            <input type="number" name="new_number_${newIndex}" class="form-control" oninput="validateNumber(this)"> 
+            <label>New Question Type: </label>
+            <select name="new_question_type_${newIndex}" class="form-control">
+                <option value=""> </option>
+                <option value="OpenEnded">Open Ended</option>
+                <option value="Optional">Optional</option>
+                <option value="MultiChoices">Multi Choices</option>
+                <option value="Rank">Rank</option>
+            </select>
+            <div class="new-options_${newIndex}">
+                <label>New Options:</label>
+                <input name="new_options_${newIndex}_0" class="form-control" style="margin-bottom: 5px;">
+                <button type="button" class="btn btn-sm btn-secondary add-option-btn">Add Option</button>
+            </div>
+        `;
+
+        additionalFieldsDiv.appendChild(newField);
+
+        // Yeni alan eklendiğinde index numarasını artır
+        newIndex++;
+
+        // Options alanlarını gizleme kontrolü
+        var newQuestionTypeSelect = newField.querySelector(`select[name="new_question_type_${newIndex - 1}"]`);
+        var newOptionsDiv = newField.querySelector(`.new-options_${newIndex - 1}`);
+        if (newQuestionTypeSelect.value !== 'OpenEnded') {
+            newOptionsDiv.style.display = 'none';
+        }
+
+        // Soru tipi değiştiğinde options alanını gizleme kontrolü
+        newQuestionTypeSelect.addEventListener('change', function() {
+            var optionsDiv = this.parentElement.querySelector('.new-options_' + this.name.split('_').pop());
+            if (this.value !== 'OpenEnded' && this.value.length !== 0) {
+                optionsDiv.style.display = 'block';
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        });
+
+        // Add Option button event listener
+        var addOptionBtn = newField.querySelector('.add-option-btn');
+        addOptionBtn.addEventListener('click', function() {
+            var optionsDiv = this.parentElement;
+            var newOptionInput = document.createElement('input');
+            var optionInputs = optionsDiv.querySelectorAll('input');
+            var newIndex = optionInputs.length; // Son indeksi al
+            newOptionInput.name = `new_options_${optionsDiv.classList[0].split('_').pop()}_${newIndex}`;
+            newOptionInput.style.marginBottom = '5px';
+            newOptionInput.className = 'form-control';
+            optionsDiv.insertBefore(newOptionInput, this);
+        });
+        
+        
+    });
+});
+var form = document.querySelector('#form-question');
+
+form.addEventListener('submit', function(event) {
+    var newQuestionType = document.querySelectorAll('input[name^="new_question_type"]');
+    var newNumber = document.querySelectorAll('input[name^="new_number"]');
+    var newQuestion = document.querySelectorAll('input[name^="new_question"]');
+    var newOptions = document.querySelectorAll('input[name^="new_options"]');
+
+    newQuestionType.forEach(function(input, index) {
+        var newInput = document.createElement('input');
+        newInput.type = 'hidden';
+        newInput.name = 'new_question_type_' + index;
+        newInput.value = input.value;
+        form.appendChild(newInput);
+    });
+
+    newNumber.forEach(function(input, index) {
+        var newInput = document.createElement('input');
+        newInput.type = 'hidden';
+        newInput.name = 'new_number_' + index;
+        newInput.value = input.value;
+        form.appendChild(newInput);
+    });
+
+    newQuestion.forEach(function(input, index){
+        var newInput = document.createElement('input');
+        newInput.type = 'hidden';
+        newInput.name = 'new_question_' + index;
+        newInput.value = input.value;
+        form.appendChild(newInput);
+    });
+
+    newOptions.forEach(function(input, index){
+        var newInput = document.createElement('input');
+        newInput.type = 'hidden';
+        newInput.name = 'new_options_' + index;
+        newInput.value = input.value;
+        form.appendChild(newInput);
+    });
+});
+function validateNumber(input) {
+    // Girilen değeri alın
+    var value = input.value;
+
+    // Pozitif bir sayı değilse
+    if (value < 0) {
+        // Hata mesajı göster
+        alert("Lütfen pozitif bir sayı girin.");
+
+        // Değeri sıfırla
+        input.value = "";
+    }
+}
+
+function numberControl(){
+    var numbers = document.querySelectorAll('input[name^="new_number"]');
+    var numbers_list = [];
+    for(var i=0; i<numbers.length; i++){
+        if(numbers_list.includes(numbers[i].value)){
+            //console.log(numbers[i].value);
+            return 'multiTimeUsage';
+        }
+        else{
+            if(numbers[i].value){
+                if(numbers[i].value == 0){
+                    return 'zeroProblem';
+                }
+                numbers_list.push(numbers[i].value);
+            }
+           
+            
+        }
+    }
+    var numberArray = Array.from(numbers).map(function(input) {
+        return parseInt(input.value);
+    });
+    for(var i=0; i<numberArray.length; i++){
+        if(isNaN(numberArray[i])){
+            numberArray.splice(i,1);
+            i--;
+        }
+    }
+    numberArray.sort(function(a, b){return a-b});
+    //console.log(numberArray);
+    if(numberArray[0] != 1){
+        return 'notSorted';
+    }
+    for(var i=0; i<(numberArray.length-1); i++){
+        if(numberArray[i+1] - numberArray[i] != 1){
+            return 'notSorted';
+        }
+    }
+    return true;
+}
+
+
+var checkBtn = document.querySelector('#save-btn');
+checkBtn.addEventListener('click', function() {
+    var numbersAreOkey = numberControl();
+    if(numbersAreOkey === 'multiTimeUsage'){
+        alert('Aynı sayıyı birden fazla kez giremezsin');
+    }
+    else if(numbersAreOkey ==='notSorted'){
+        alert('Sayılar sıralı değil');
+    }
+    else if(numbersAreOkey ==='zeroProblem'){
+        alert('sayı olarak 0 giremezsin');
+    }
+    else{
+        let text = document.getElementById("id_form_title").value;
+        if(text){
+            form.submit();
+        }
+        else{
+            alert('Baslık giriniz');
+        }
+        
+    }
+    
+});
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,459 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% block content %}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+
+    <form  id="formForm" action="{% url 'form_edit_submission' form.slug form.author.username %}" method="post" onsubmit="return validateForm()">
+        {% csrf_token %}
+        <div class="card mb-3" style="background-color: #F9C8E6; margin-top: 20px;">
+            <h1 class="card-header text-center" id="form_header">{{form.title}}</h1>
+            
+            <div class="card-body">
+                <label>Title: </label>
+                <input class="mb-3" id="form_title" name="form_title" oninput="formTitle()">
+                <hr/>
+                * means question is required
+                <br/>
+                <br/>
+                {% for question in questions|dictsort:"number" %}
+                
+                
+                {% with forloop.counter as question_id %}
+                <div id="question_{{question_id}}">
+                    {{question.number}}.{{question.question}}<br/>
+                    <label>Question Number: </label>
+                    <input type="number" name="new_number_{{question_id}}" class="form-control" oninput="validateNumber(this)" value="{{question.number}}"> 
+                    {% if question.required %}
+                    *
+                    {% endif %}
+                    
+
+                    <br/>
+                    {% if question.options %}
+                        
+                            {% with question.options|split_string:"," as options %}
+                                {% if question.type == "Optional" %}
+                                    {% for option in options %}
+                                        {% with forloop.counter as option_id %}
+                                        {% if question.required %}
+                                            <input type="radio" name="optional_{{question_id}}_required" id="option_{{question_id}}_{{ option_id }}" value="{{ option_id }}" />
+                                            <label for="option_{{question_id}}_{{ option_id }}">{{ option }}</label><br />
+                                        {% else %}
+                                            <input type="radio" name="optional_{{question_id}}" id="option_{{question_id}}_{{ option_id }}" value="{{ option_id }}" />
+                                            <label for="option_{{question_id}}_{{ option_id }}">{{ option }}</label><br />
+                                        {% endif %}
+                                        {% endwith %}
+                                
+                                    {% endfor %}
+                                {% elif question.type == "MultiChoices" %}
+                            
+                                    {% for option in options %}
+                                        {% with forloop.counter as option_id %}
+                                            {% if question.required %}
+                                            <input type="checkbox" name="multi_choices_{{question_id}}_required" id="option_{{question_id}}_{{ option_id }}" value="{{ option_id }}" />
+                                            <label for="option_{{question_id}}_{{ option_id }}">{{ option }}</label><br />
+                                            {% else %}
+                                            <input type="checkbox" name="multi_choices_{{question_id}}" id="option_{{question_id}}_{{ option_id }}" value="{{ option_id }}" />
+                                            <label for="option_{{question_id}}_{{ option_id }}">{{ option }}</label><br />
+                                            {% endif %}
+                                        {% endwith %}
+                                    
+                                        {% endfor %}
+
+                                {% else %}
+                                {% for option in options %}
+                                    {% with forloop.counter as option_id %}
+                                        {{option_id}}-{{ option }}</label><br />
+                                    {% endwith %}
+                                {% endfor %}
+                                {% if question.required %}
+                                <input type="text" id="option_{{question_id}}" name="rank_{{question_id}}_required"  />
+                                {% else %}
+                                <input type="text" id="option_{{question_id}}" name="rank_{{question_id}}"  />
+                                {% endif %}
+                                {% endif %}
+                            {% endwith %}
+                        
+                    {% else %}
+                    {% if question.required %}
+                        <textarea id="option_{{question_id}}" name="open_ended_{{question_id}}_required" ></textarea><br />
+                    {% else %}
+                        <textarea id="option_{{question_id}}" name="open_ended_{{question_id}}" ></textarea><br />
+                    {% endif %}
+                    {% endif %}
+                    <button type="button" id="delete_{{question_id}}" class="btn btn-secondary delete-question-btn">Delete Question</button>
+                    <hr/>
+                    {% endwith %}
+                </div>
+                {% endfor %}
+                <div id="additional-fields">
+                    <!-- Buraya JavaScript ile eklenecek alanlar gelecek -->
+                </div>
+                
+                <div style="margin-bottom: 20px; margin-top: 10px;">
+                    <button type="button" id="add-field-btn" class="btn btn-secondary">Add Question</button>
+                </div>
+
+                <label>Anonymous:</label>
+                    <input type="radio" name="anonymous" value="anonymous" id="anonymous" checked>
+                    <label>Not Anonymous:</label>
+                    <input type="radio" name="anonymous" value="notanonymous" id="notanonymous" checked>
+                <div style="margin-top: 15px; margin-bottom: 15px;">
+                    <label>Ask Code</label>
+                    <input type="radio" id="ask_code" name="ask_code" value="true" onclick="clearSelection(this)">
+                </div>  
+                <div style="margin-top: 15px; margin-bottom: 15px;">
+                    <label>Complete this form</label>
+                    <input type="radio" id="form_complete" name="form_complete" value="true" onclick="clearSelection(this)">
+                </div>
+                    <div>
+                        <button type="submit" id="save-btn" class="btn btn-light" style="margin-top: 15px;">Save</button>
+                    </div>
+            </div>
+        </div>
+        {% if form.author == user %}
+        <button type="submit" id="editForm" class="btn btn-primary" style="margin-bottom: 15px;">Edit Form</button>
+        {% endif %}
+    </form>
+
+</div>
+    </div>
+    <div style="margin-bottom: 200px;"></div>
+</div>
+
+<script>
+function clearSelection(radio) {
+    if (radio.previous) {
+        radio.checked = false;
+        radio.previous = false;
+    } else {
+        radio.previous = true;
+    }
+}
+function formTitle(){
+    let text = document.getElementById("form_title").value;
+    //console.log(text)
+    if(text){
+        document.getElementById("form_header").textContent = text;
+    }
+    else{
+        document.getElementById("form_header").textContent = "{{form.title}}";
+    }
+    
+}
+var deleteButtons = document.querySelectorAll('.delete-question-btn');
+        deleteButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            //console.log("mehmet");
+            var questionId = this.id.split('_')[1]; // Soru ID'sini al
+            var questionDiv = document.querySelector('#question_' + questionId); // Sorunun bulunduğu div'i seç
+            questionDiv.remove(); // Soruyu sil
+        });
+    });
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    var form_title = document.getElementById("form_title");
+    form_title.value = "{{form.title}}";
+    var form_ask_code = document.getElementById("ask_code")
+    if("{{form_ask_code}}"=="True"){
+        //console.log("jwnfkjwebfwjk")
+        form_ask_code.checked = true;
+    }
+    else{
+        form_ask_code.checked = false;
+    }
+    var anon_control = ("{{form.anonymous|lower}}");
+    //console.log(typeof anon_control)
+    if(anon_control==='true'){
+        document.getElementById("anonymous").checked=true;
+    }
+    else{
+        document.getElementById("notanonymous").checked = true;
+    }
+    var addFieldBtn = document.querySelector('#add-field-btn');
+    var additionalFieldsDiv = document.querySelector('#additional-fields');
+    var typeSelect = document.querySelector('#id_type');
+    var textareas = document.querySelectorAll('textarea[name^="open_ended"]');
+    var optionalAreas = document.querySelectorAll('input');
+    
+    for(var i = 0; i < textareas.length; i++){
+        textareas[i].addEventListener('keydown',preventDefaultFunction)
+    }
+    for(var i = 0; i < optionalAreas.length; i++){
+        if(optionalAreas[i].id != 'form_title' && !optionalAreas[i].name.startsWith("new_number") && optionalAreas[i].name != "anonymous" && optionalAreas[i].name != "ask_code" && optionalAreas[i].name != "form_complete" && optionalAreas[i].name != "searched"){
+            //console.log(optionalAreas[i].id)
+            optionalAreas[i].addEventListener('click',preventDefaultFunction)
+            optionalAreas[i].addEventListener('keydown', preventDefaultFunction)
+        }}
+         
+    var lenOfQuestions = JSON.parse("{{form_questions_json|escapejs}}");
+    var indexStart = lenOfQuestions.length;
+    
+    var newIndex = indexStart+1;
+
+    addFieldBtn.addEventListener('click', function() {
+        var newField = document.createElement('div');
+        var uniqueId = 'question_' + newIndex;
+        newField.id = uniqueId
+        newField.innerHTML = `
+            <hr>
+            <label>New Question: </label>
+            <input name="new_question_${newIndex}" class="form-control">
+            <br/>
+            <label>Required:</label>
+            <input type="radio" name="required_${newIndex}" value="required" checked>
+            <label>Not Required:</label>
+            <input type="radio" name="required_${newIndex}" value="notrequired" checked>
+            <br/>
+            <br/>
+            <label>New Number: </label>
+            <input type="number" name="new_number_${newIndex}" class="form-control" oninput="validateNumber(this)"> 
+            <label>New Question Type: </label>
+            <select name="new_question_type_${newIndex}" class="form-control">
+                <option value=""> </option>
+                <option value="OpenEnded">Open Ended</option>
+                <option value="Optional">Optional</option>
+                <option value="MultiChoices">Multi Choices</option>
+                <option value="Rank">Rank</option>
+            </select>
+            <div class="new-options_${newIndex}">
+                <label>New Options:</label>
+                <input name="new_options_${newIndex}_0" class="form-control" style="margin-bottom: 5px;">
+                <button type="button" class="btn btn-sm btn-secondary add-option-btn">Add Option</button>
+            </div>
+        `;
+
+        additionalFieldsDiv.appendChild(newField);
+
+        // Yeni alan eklendiğinde index numarasını artır
+        newIndex++;
+
+        // Options alanlarını gizleme kontrolü
+        var newQuestionTypeSelect = newField.querySelector(`select[name="new_question_type_${newIndex - 1}"]`);
+        var newOptionsDiv = newField.querySelector(`.new-options_${newIndex - 1}`);
+        if (newQuestionTypeSelect.value !== 'OpenEnded') {
+            newOptionsDiv.style.display = 'none';
+        }
+
+        // Soru tipi değiştiğinde options alanını gizleme kontrolü
+        newQuestionTypeSelect.addEventListener('change', function() {
+            var optionsDiv = this.parentElement.querySelector('.new-options_' + this.name.split('_').pop());
+            if (this.value !== 'OpenEnded' && this.value.length !== 0) {
+                optionsDiv.style.display = 'block';
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        });
+
+        // Add Option button event listener
+        var addOptionBtn = newField.querySelector('.add-option-btn');
+        addOptionBtn.addEventListener('click', function() {
+            var optionsDiv = this.parentElement;
+            var newOptionInput = document.createElement('input');
+            var optionInputs = optionsDiv.querySelectorAll('input');
+            var newIndex = optionInputs.length; // Son indeksi al
+            newOptionInput.name = `new_options_${optionsDiv.classList[0].split('_').pop()}_${newIndex}`;
+            newOptionInput.style.marginBottom = '5px';
+            newOptionInput.className = 'form-control';
+            optionsDiv.insertBefore(newOptionInput, this);
+        });
+        
+        
+        
+    });
+});
+var form = document.querySelector('#formForm');
+
+function preventDefaultFunction(event) {
+    // Default davranışı durdurma
+    event.preventDefault();
+}
+
+function elementAdd() {
+    var newQuestionType = document.querySelectorAll('input[name^="new_question_type"]');
+    var newNumber = document.querySelectorAll('input[name^="new_number"]');
+    var newQuestion = document.querySelectorAll('input[name^="new_question"]');
+    var newOptions = document.querySelectorAll('input[name^="new_options"]');
+
+    newQuestionType.forEach(function(input, index) {
+        var newInput = document.createElement('input');
+        newInput.type = 'hidden';
+        newInput.name = 'new_question_type_' + index;
+        newInput.value = input.value;
+        form.appendChild(newInput);
+    });
+
+    newNumber.forEach(function(input, index) {
+        var newInput = document.createElement('input');
+        newInput.type = 'hidden';
+        newInput.name = 'new_number_' + index;
+        newInput.value = input.value;
+        form.appendChild(newInput);
+    });
+
+    newQuestion.forEach(function(input, index){
+        var newInput = document.createElement('input');
+        newInput.type = 'hidden';
+        newInput.name = 'new_question_' + index;
+        newInput.value = input.value;
+        form.appendChild(newInput);
+    });
+
+    newOptions.forEach(function(input, index){
+        var newInput = document.createElement('input');
+        newInput.type = 'hidden';
+        newInput.name = 'new_options_' + index;
+        newInput.value = input.value;
+        form.appendChild(newInput);
+    });
+};
+function validateNumber(input) {
+    // Girilen değeri alın
+    var value = input.value;
+
+    // Pozitif bir sayı değilse
+    if (value < 0) {
+        // Hata mesajı göster
+        alert("Lütfen pozitif bir sayı girin.");
+
+        // Değeri sıfırla
+        input.value = "";
+    }
+}
+
+function numberControl(){
+    var numbers = document.querySelectorAll('input[name^="new_number"]');
+    var numbers_list = [];
+    for(var i=0; i<numbers.length; i++){
+        if(numbers_list.includes(numbers[i].value)){
+            //console.log(numbers)
+            //console.log(numbers[i].value);
+            alert('Aynı sayıyı birden fazla kez giremezsin');
+            //console.log(numbers_list)
+            return false;
+        }
+        else{
+            if(numbers[i].value){
+                if(numbers[i].value == 0){
+                    alert('sayı olarak 0 giremezsin');
+                    return false;
+                }
+                numbers_list.push(numbers[i].value);
+            }
+           
+            
+        }
+    }
+    var numberArray = Array.from(numbers).map(function(input) {
+        return parseInt(input.value);
+    });
+    for(var i=0; i<numberArray.length; i++){
+        if(isNaN(numberArray[i])){
+            numberArray.splice(i,1);
+            i--;
+        }
+    }
+    numberArray.sort(function(a, b){return a-b});
+    //console.log(numberArray);
+    if(numberArray.length==0){
+        return true;
+    }
+    else if(numberArray[0] != 1){
+        alert('Sayılar sıralı değil');
+        return false;
+    }
+    for(var i=0; i<(numberArray.length-1); i++){
+        if(numberArray[i+1] - numberArray[i] != 1){
+            alert('Sayılar sıralı değil');
+            return false;
+        }
+    }
+    return true;
+}
+
+
+function validateForm(){
+    
+    var hiddenInputs = document.querySelectorAll('input[type="hidden"]');
+    //console.log(hiddenInputs)
+    var numbersAreOkey = numberControl();
+    //console.log(numbersAreOkey)
+    if(numbersAreOkey==false){
+        
+        var numbers = document.querySelectorAll('input[name^="new_number"]');
+        //console.log(numbers)
+        var hiddenInputs2 = document.querySelectorAll('input[type="hidden"]');
+        //console.log(hiddenInputs2)
+        return false;
+    }
+    else{
+        let text = document.getElementById("form_title").value;
+        if(text){   
+            var numbers = document.querySelectorAll('input[name^="new_number"]');
+            var options = document.querySelectorAll('input[name^="new_options"]')
+            //console.log(numbers)
+            var divs = document.querySelectorAll('div[id^="question_"]')
+            var startAt = JSON.parse("{{form_questions_json|escapejs}}").length;
+            //console.log(startAt)
+            for(var i=0; i<divs.length; i++){
+                var inputs = divs[i].getElementsByTagName('input');
+                for(var j=0; j<inputs.length; j++){
+                    if(inputs[j].name.startsWith("new_number")){
+                        if(inputs[j].name.split("_")[2]<=startAt)
+                        {//console.log(inputs[j])
+                        if(!inputs[j].value){
+                            alert('Tüm sayıları girin')
+                            return false;
+                        }}}
+                }
+                
+            }
+            for(var i=0; i<divs.length;i++){
+                var inputs = divs[i].getElementsByTagName('input');
+                for(var j=0; j<inputs.length; j++){
+                    if(inputs[j].name.startsWith("new_question")){
+                        if(inputs[j].name.split("_")[2]>startAt){
+                            if(!inputs[j].value){
+                            divs[i].remove();
+                        }
+                        }
+                        
+                    }
+                    else if(inputs[j].name.startsWith("new_number")){
+                        if(inputs[j].name.split("_")[2]>startAt){
+                            if(!inputs[j].value){
+                            divs[i].remove();
+                        }
+                        }
+                    }
+                    
+                }
+            }
+
+            for(var i=0; i<options.length; i++){
+                if(!options[i].value){
+                    options[i].remove();
+                }
+            }
+            
+            //console.log(divs)
+            //console.log(document.querySelectorAll('div[id^="question_"]'))
+            return true
+            ;
+        }
+        else{
+            alert('Baslık giriniz');
+            return false;
+        }
+        
+    }
+    
+};
+
+    
+</script>
+{% endblock %}

@@ -1,0 +1,517 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% block content %}
+
+{% if form.ask_code and not form.author == user %}
+<div id="code_div" name="code_div">
+    <label>Enter the Code</label>
+<input name="code_input" id="code_input">
+<button id="code_button" name="code_button">Check</button>
+</div>
+{% endif %}
+    
+
+{% if form.author != user %}
+<div id="main_div" class="container"  {% if form.ask_code %} style="display: none;"{% endif %}>
+{% else %}
+<div id="main_div" class="container">
+{% endif %}
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            {% if form.completed %}
+                <h1 style="margin-left: 10px;">Form has Completed</h1>
+            {% endif %}
+            {% if isFilled %}
+                <h1 style="margin-left: 10px;">Form has filled by You</h1>
+            {% endif %}
+            {% if form.is_changed %}
+            <h6>Notice! This form changed at {{form.changed_time}}</h6>
+            {% endif %}
+            
+
+<form  id="formForm" {% if user not in form.filled_by.all %} action="{% url 'form_submit' form.slug form.author.username %}" method="post" onsubmit="return validateForm()"{% endif %}>
+    {% csrf_token %}
+    <div class="card mb-3" style="background-color: #F9C8E6; margin-top: 20px;">
+        <h1 class="card-header text-center">{{form.title}}</h1>
+        <div class="card-body">
+            * means question is required
+            <br/>
+            <br/>
+            {% for question in questions %}
+            {% with forloop.counter as question_id %}
+                {{question.number}}. {{question.question}}
+                {% if question.required %}
+                *
+                {% endif %}
+                <br/>
+                {% if question.options %}
+                    
+                        {% with question.options|split_string:"," as options %}
+                            {% if question.type == "Optional" %}
+                                {% for option in options %}
+                                    {% with forloop.counter as option_id %}
+                                    {% if question.required %}
+                                        <input type="radio" name="optional_{{question_id}}_required" id="option_{{question_id}}_{{ option_id }}" value="{{ option_id }}" onclick="clearSelection(this)" />
+                                        <label for="option_{{question_id}}_{{ option_id }}">{{ option }}</label><br />
+                                    {% else %}
+                                        <input type="radio" name="optional_{{question_id}}" id="option_{{question_id}}_{{ option_id }}" value="{{ option_id }}" onclick="clearSelection(this)"/>
+                                        <label for="option_{{question_id}}_{{ option_id }}">{{ option }}</label><br />
+                                    {% endif %}
+                                    {% endwith %}
+                            
+                                {% endfor %}
+                            {% elif question.type == "MultiChoices" %}
+                        
+                                {% for option in options %}
+                                    {% with forloop.counter as option_id %}
+                                        {% if question.required %}
+                                        <input type="checkbox" name="multi_choices_{{question_id}}_required" id="option_{{question_id}}_{{ option_id }}" value="{{ option_id }}" />
+                                        <label for="option_{{question_id}}_{{ option_id }}">{{ option }}</label><br />
+                                        {% else %}
+                                        <input type="checkbox" name="multi_choices_{{question_id}}" id="option_{{question_id}}_{{ option_id }}" value="{{ option_id }}" />
+                                        <label for="option_{{question_id}}_{{ option_id }}">{{ option }}</label><br />
+                                        {% endif %}
+                                    {% endwith %}
+                                
+                                    {% endfor %}
+
+                            {% else %}
+                            {% for option in options %}
+                                {% with forloop.counter as option_id %}
+                                    {{option_id}}-
+                                    <span id= "choiceremove_{{question_id}}_{{option_id}}" class="choiceremove" draggable="true" ondragstart="drag(event)" style="height: 30px;
+                                    background-color: white;
+                                    margin: 10px;
+                                    text-align: center;
+                                    line-height: 20px;
+                                    cursor: pointer;">{{option}}</span>
+                                    <br>
+                                {% endwith %}
+                            {% endfor %}
+                            <br>
+                            <label>You can Drag the Options or just write their number</label>
+                            {% if question.required %}
+                            <input type="text" id="option_{{question_id}}" name="rank_{{question_id}}_required"  />
+                            {% else %}
+                            <input type="text" id="option_{{question_id}}" name="rank_{{question_id}}"  />
+                            {% endif %}
+                            {% endif %}
+                        {% endwith %}
+                    
+                {% else %}
+                {% if question.required %}
+                    <textarea id="option_{{question_id}}" name="open_ended_{{question_id}}_required" ></textarea><br />
+                {% else %}
+                    <textarea id="option_{{question_id}}" name="open_ended_{{question_id}}" ></textarea><br />
+                {% endif %}
+                {% endif %}
+                <hr/>
+                {% endwith %}
+            {% endfor %}
+                    </div>
+                </div>
+                {% if form.author == user%}
+                <p>This form's code is: {{form.form_code}}</p>
+                <p>This form's password is: {{form.code}}</p>
+                {% endif %}
+                {% if user.is_authenticated %}
+                {% if not form.completed %}
+                {% if not user in form.filled_by.all %}
+                
+                <button type="submit" class="btn btn-primary" style="margin-bottom: 10px;">
+                    {% if isFilled %}
+                    Re Submit
+                    {% else %}
+                    Submit
+                    {% endif %}
+                </button> <br/>
+                {% else %}
+                <!--<h1 style="text-align: center;">Your Answers</h1>-->
+                <button id="editAnswers" class="btn btn-danger" style="margin-bottom: 10px;">Edit Answers</button><br/>
+                {% endif %}
+                {% if form.author == user %}
+                <a class="btn btn-primary" href="{% url 'form_edit' form.author.username form.slug  %}" role="button" id="editForm"  style="margin-bottom: 15px;">Edit Form</a><br/>
+                {% endif %}
+                
+                {% endif %}
+                {% else %}
+                {% if not form.completed %}
+                {% if form.anonymous %}
+                <button type="submit" class="btn btn-primary" style="margin-bottom: 10px;">
+                    {% if isFilled %}
+                    Re Submit
+                    {% else %}
+                    Submit
+                    {% endif %}
+                </button> <br/>
+                {% endif %}
+                {% endif %}
+                {% endif %}
+                <a class="btn btn-primary" href="{% url 'result_page' form.author form.slug %}" role="button" id="resultPage"  style="margin-bottom: 15px;">Show Results</a>
+            </form>
+           
+        </div>
+    </div>
+    <div style="margin-bottom: 200px;"></div>
+</div>
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    code_input_exist = document.querySelector("#code_input")
+    if(code_input_exist){
+        document.getElementById("code_input").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Enter tuşunun varsayılan davranışını engelle
+                document.getElementById("code_button").click(); // Butona tıklama işlemi
+            }
+        });
+    document.getElementById("code_button").addEventListener("click", function() {
+    
+        code_value = document.getElementById("code_input").value;
+        if(code_value=="{{form.code}}"){
+            code_div = document.getElementById("code_div")
+            code_div.style.display = "none";
+            main_div = document.getElementById("main_div")
+            main_div.style.display = "block";
+        
+
+    }
+    else{
+        code_input_exist.value = "";
+    }
+    
+    })};
+    if("{{form.ask_code}}" != "True"){
+        code_div_result = document.querySelector("code_div")
+        if(code_div_result){
+            document.getElementById("code_div").remove()
+        }
+        
+    }
+    var myAnswers = JSON.parse("{{my_answers|escapejs}}");
+    //console.log(myAnswers);
+    if(myAnswers.length > 0 || "{{isAnswered}}"==="True"){
+        var choiceremoveAreas = document.querySelectorAll('.choiceremove') 
+        var textareas = document.querySelectorAll('textarea[name^="open_ended"]');
+        var optionalAreas = document.querySelectorAll('input');
+        
+        for(var i = 0; i < textareas.length; i++){
+            textareas[i].addEventListener('keydown', preventDefaultFunction)
+        }
+        for(var i = 0; i < optionalAreas.length; i++){
+            if(!optionalAreas[i].name.startsWith('code_input') && !optionalAreas[i].name.startsWith("searched")){
+                optionalAreas[i].addEventListener('click', preventDefaultFunction)
+                optionalAreas[i].addEventListener('keydown', preventDefaultFunction)
+            }
+            
+        }
+        for(var i = 0; i < choiceremoveAreas.length; i++){
+            choiceremoveAreas[i].draggable = false;
+        }
+        
+        for(var i = 0; i < myAnswers.length; i += 2){
+            var getId = '#option_' + myAnswers[i];
+            //var idNumber = Math.floor(i / 2) + 1;
+            var getId2 = 'option_' + myAnswers[i] + '_';
+            var multiAndOptionals = document.querySelectorAll(`[id^="${getId2}"]`);
+            
+            if(multiAndOptionals.length == 0){
+                document.querySelector(getId).value = myAnswers[i + 1];
+            } else {
+                var optionalId = "#" + getId2 + myAnswers[i+1];
+                var answervalue = myAnswers[i + 1];
+                if(typeof answervalue === 'string' && answervalue.startsWith("[")){
+                    var multiSelected = JSON.parse(answervalue.replace(/'/g, '"'));
+                    for(var j = 0; j < multiSelected.length; j++){
+                        var multiChoiceId = '#option_' + myAnswers[i] + '_' + multiSelected[j];
+                        document.querySelector(multiChoiceId).checked = true;       
+                    }
+                } else {
+                    var controlId = "#" + getId2 + myAnswers[i+1];
+                    document.querySelector(controlId).checked = true;
+                    
+                }
+            }
+        }
+    }
+    var editFormClicked = false;
+    var editFormButton = document.getElementById('editAnswers');
+    if (editFormButton) {
+        editFormButton.addEventListener('click', function(event) {
+            
+            if (!editFormClicked) {
+                event.preventDefault();
+                activateFormSubmission();
+                editFormButton.textContent = 'Submit';
+                editFormButton.type = 'submit';
+                //console.log(editFormButton)
+                var choiceremoveAreas = document.querySelectorAll('.choiceremove') 
+                var textareas = document.querySelectorAll('textarea[name^="open_ended"]');
+                var optionalAreas = document.querySelectorAll('input');
+                
+                for(var i = 0; i < choiceremoveAreas.length; i++){
+                    choiceremoveAreas[i].draggable = true;
+                }
+
+                for(var i = 0; i < textareas.length; i++){
+                    textareas[i].removeEventListener('keydown',preventDefaultFunction)
+                }
+                for(var i = 0; i < optionalAreas.length; i++){
+                    optionalAreas[i].removeEventListener('click',preventDefaultFunction)
+                    optionalAreas[i].removeEventListener('keydown', preventDefaultFunction) 
+                editFormClicked = true;
+            } }
+            else{
+                //editFormButton.click();
+            }
+        });
+    }
+    
+});
+
+
+var draggedItem = null;
+
+function drag(event) {
+  draggedItem = event.target;
+}
+
+function drop(event) {
+  event.preventDefault();
+  var target = event.target;
+  var container = target.parentElement;
+  //console.log(target.id)
+  var targett = target.id.split("_")
+  //console.log(targett) 
+  if (target.classList.contains('choiceremove')) {
+    var tempHTML = target.innerHTML;
+    var tempid = target.id;
+    target.innerHTML = draggedItem.innerHTML;
+    target.id = draggedItem.id;
+    draggedItem.id = tempid;
+    draggedItem.innerHTML = tempHTML;
+  }
+  displayOrder(targett[targett.length - 2]); // Sıralamayı güncelle
+}
+
+function allowDrop(event) {
+  event.preventDefault();
+}
+
+function displayOrder(questionNumber) {
+  var order = "";
+  var glasses = document.querySelectorAll('.choiceremove');
+  glasses.forEach(function(glass) {
+    id_list = glass.id.split("_")
+    if(id_list[1]==questionNumber){
+    //console.log(typeof(glass.innerHTML))
+    var number = glass.id[glass.id.length-1];
+    order += number + ",";
+    }
+  });
+  document.getElementById('option_'+questionNumber).value = order.slice(0, -1); // Virgülü kaldır
+}
+
+var glasses = document.querySelectorAll('.choiceremove');
+
+glasses.forEach(function(glass) {
+  glass.addEventListener("dragstart", drag);
+  glass.addEventListener("drop", drop);
+  glass.addEventListener("dragover", allowDrop);
+});
+
+
+function clearSelection(radio) {
+    if (radio.previous) {
+        radio.checked = false;
+        radio.previous = false;
+    } else {
+        radio.previous = true;
+    }
+}
+
+
+
+
+
+function preventDefaultFunction(event) {
+    // Default davranışı durdurma
+    event.preventDefault();
+}
+function activateFormSubmission() {
+    var form = document.querySelector('#formForm');
+    form.action = "{% url 'form_submit' form.slug form.author.username %}";
+    form.method = 'post';
+    form.setAttribute('onsubmit', 'return validateForm()');
+    //console.log(form)
+}
+
+
+
+            
+    function validateForm() {
+        var optionalFields = document.querySelectorAll('input[type="radio"][name^="optional_"]');
+        var multiChoicesFields = document.querySelectorAll('input[type="checkbox"][name^="multi_choices_"]')
+        var rankFields = document.querySelectorAll('input[type="text"][name^="rank_"]')
+        var openendedFields = document.querySelectorAll('textarea[name^="open_ended_"]')
+        option_check = optionalControl(optionalFields,true)
+        multi_check = multiChoicesControl(multiChoicesFields,true)
+        rank_check = rankControl(rankFields,true)
+        openended_check = openendedControl(openendedFields,true)
+        var submitable =  option_check && multi_check && rank_check && openended_check
+        if(submitable){
+            return true;
+        }
+        else{
+            alert("Lütfen alanlari düzgünce doldurun.");
+            return false;
+            
+        }
+
+    }
+    function optionalControl(optionalFields,isRequired){
+        if(isRequired){
+            var isValid = true;
+
+            for (var i = 0; i < optionalFields.length; i++) {
+                var field = optionalFields[i];
+                var questionId = field.name.split("_")[1];
+                var splitted = field.name.split("_")
+                if(splitted.length>2){
+                    var isChecked = document.querySelector('input[type="radio"][name="optional_' + questionId + '_required"]:checked');
+    
+                    if (!isChecked) {
+                        isValid = false; // Formun gönderilmesini engelle
+                        break;
+                    }
+                }
+                
+            }
+    
+            
+    
+            return isValid; // Formu gönder veya gönderme
+        }
+
+        else{
+            return true
+        }
+    }
+    function multiChoicesControl(multiChoicesFields,isRequired){
+        if(isRequired){
+            var isValid = true;
+
+            for (var i = 0; i < multiChoicesFields.length; i++) {
+                var field = multiChoicesFields[i];
+                var questionId = field.name.split("_")[2];
+                var splitted = field.name.split("_")
+                if(splitted.length>3){
+                    var isChecked = document.querySelector('input[type="checkbox"][name="multi_choices_' + questionId + '_required"]:checked');
+    
+                    if (!isChecked) {
+                        isValid = false; // Formun gönderilmesini engelle
+                        break;
+                }
+                }
+                
+            }
+    
+            
+    
+            return isValid; // Formu gönder veya gönderme
+        }
+
+        else{
+            return true
+        }
+    }
+    function rankControl(rankFields,isRequired){
+        if(isRequired){
+            var isValid = true;
+
+            for (var i = 0; i < rankFields.length; i++) {
+                var field = rankFields[i];
+                var questionId = field.name.split("_")[1];
+                var splitted = field.name.split("_")
+                if(splitted.length>2){
+                    var isChecked = field.value.trim() !== '';
+    
+                    if (!isChecked) {
+                        isValid = false; // Formun gönderilmesini engelle
+                        break;
+                }
+                }
+                values = rankFields[i].value.split(",")
+                values.sort(function(a, b){return a-b});
+                var fields = document.querySelectorAll('[id^="choiceremove_' + questionId).length;
+                //console.log(fields)
+                //console.log(values)
+                if(fields==values.length){
+                    for(var index=0; index<fields-1; index++){
+                        if(index==0){
+                            if(values[index]!=1){
+                                isValid = false;
+                            }
+                        }
+                        if(!values[index]){
+                            isValid = false;
+                        }
+                        if(values[index+1]-values[index]!=1){
+                            isValid = false;
+                        }
+                    }
+                }
+                else{
+                    var required = field.name.split("_");
+                    if(required.length==3){
+                    isValid = false;
+                    }
+                    
+                    else{
+                        if(values.length==1 && values[0]==''){}
+                        else{isValid=false;}
+                    }
+                }
+                
+            }
+    
+            
+    
+            return isValid; // Formu gönder veya gönderme
+        }
+
+        else{
+            return true
+        }
+    }
+    function openendedControl(openendedFields,isRequired){
+        if(isRequired){
+            var isValid = true;
+
+            for (var i = 0; i < openendedFields.length; i++) {
+                var field = openendedFields[i];
+                var questionId = field.name.split("_")[2];
+                var splitted = field.name.split("_")
+                if(splitted.length>3)
+                {
+                    var isChecked = field.value.trim() !== '';
+    
+                    if (!isChecked) {
+                        isValid = false; // Formun gönderilmesini engelle
+                        break;
+                }
+                }
+                
+            }
+    
+
+            return isValid; // Formu gönder veya gönderme
+        }
+
+        else{
+            return true
+        }
+    }
+</script>
+            
+{% endblock %}

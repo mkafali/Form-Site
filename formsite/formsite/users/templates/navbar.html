@@ -1,0 +1,94 @@
+<nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark" style="position: fixed; width: 100%; z-index: 1000; margin-bottom: 20px;">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{% url 'home' %}">FORM</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          
+          
+        {% if not user.is_authenticated %}
+          
+            <li class="nav-item">
+              <a class="nav-link" aria-current="page" href="{% url 'user_login' %}">Log In</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" aria-current="page" href="{% url 'user_register' %}">Register</a>
+            </li>
+          
+        {% endif %}
+        </ul>
+
+        <div class="d-flex">
+          {% if user.is_authenticated %}
+          <form method="post" action="{% url 'dark_mode' %}">
+            {% csrf_token %}
+            <button class="btn btn-outline-secondary" type="submit" style="border: none; outline: none;" id="darkModeToggle2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-half" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 0 8 1zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16"/>
+              </svg>
+            </button>
+          </form>
+          {% else %}
+          <button class="btn btn-outline-secondary" type="submit" style="border: none; outline: none;" id="darkModeToggle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-half" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 0 8 1zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16"/>
+              </svg>
+            </button>
+          {% endif %}
+        </div>
+        <form class="d-flex" method="POST" action="{% url 'search' %}">
+          {% csrf_token %}  
+          <input class="form-control me-2" type="search" placeholder="Enter Code" aria-label="Search" name="searched">
+          <button class="btn btn-outline-secondary" type="submit">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+              <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+            </svg>
+          </button>
+        </form>
+        {% if user.is_authenticated %}
+        <ul class="navbar-nav ml-auto"> <!-- Right-aligned items -->
+                
+            <li class="nav-item">
+                <a class="nav-link text-light" href="{%url 'user_profile' %}">{{user.username}}</a> <!-- You can use a link or just text -->
+            </li>
+            {% if profile.photo %}
+            <li class="profile-photo-container" style="width: 45px; height: 45px; overflow: hidden; border-radius: 50%; border: 2px; border-color: aliceblue;">
+              <a href="{%url 'user_profile' %}"><img src="{{ profile.photo.url }}" alt="Profil Resmi" class="rounded-circle" style="width: 100%; height: 100%; object-fit: cover;"></a>
+          </li>
+            {% else %}
+            <li class="profile-photo-container" style="width: 45px; height: 45px; overflow: hidden; border-radius: 50%; border: 2px; border-color: aliceblue;">
+              <a href="{%url 'user_profile' %}"><img src="/media/users/profile_photos/anon.jpg" alt="Profil Resmi" class="profile-photo rounded-circle"></a>
+            </li>
+            {% endif %}
+  
+          </ul>
+        {% endif %}
+
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+
+<script>
+  // script.js
+
+document.addEventListener("DOMContentLoaded", function() {
+  var darkk = document.querySelector("#darkModeToggle");
+  if(darkk){
+  const darkModeToggle = document.getElementById("darkModeToggle");
+  // Kullanıcının tercihini alır
+  let isDarkMode = localStorage.getItem("darkMode") === "true";
+
+  // Dark mode toggle butonu
+  darkModeToggle.addEventListener("click", function() {
+    isDarkMode = !isDarkMode; // Tercih değişimi
+    localStorage.setItem("darkMode", isDarkMode); // Cookie'ye kaydet
+  });
+
+}
+});
+
+</script>

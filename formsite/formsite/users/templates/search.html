@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% if form %}
+<div class="container" style="margin-top: 20px;">
+    <div class="row justify-content-center">
+        <div class="col-md-2">
+        <a href="{% url 'form_page' form.author form.slug %}" style="margin-left: 30%;">{{form.title}}</a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="container" style="margin-top: 20px;">
+    <div class="row justify-content-center">
+        <div class="col-md-2">
+        No Results
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

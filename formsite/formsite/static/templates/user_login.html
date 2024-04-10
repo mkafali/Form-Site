@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-4">
+    
+      <br/>
+      
+      {% if messages %}
+        {% if not user.is_authenticated %}
+          {% for message in messages %}
+            <div class="alert alert-warning" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endif %}
+      
+      <form method="POST" action="{% url 'user_login' %}">
+        {% csrf_token %}
+        <div class="card text-bg-secondary">
+          <h1 class="card-header text-center">Login</h1>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="username" class="form-label">Username</label>
+              <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <div>
+              <button type="submit" class="btn btn-light">Login</button>
+            </div>
+          </div>
+        </div>
+      </form>
+      
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <br/>
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-warning" role="alert">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="POST" action="{% url 'user_edit' %}">
+                {% csrf_token %}
+                <div class="card text-bg-secondary border-light mb-3">
+                    <h1 class="card-header text-center">Register</h1>
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <ul>
+                                    {% for field, error_list in form.errors.items %}
+                                        {% for error in error_list %}
+                                            <li>{{ field|title }}: {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            {{ form.username.label_tag }}
+                            {{ form.username }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">First Name</label>
+                            {{ form.first_name.label_tag }}
+                            {{ form.first_name }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Last Name</label>
+                            {{ form.last_name.label_tag }}
+                            {{ form.last_name }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">E-Mail</label>
+                            {{ form.email.label_tag }}
+                            {{ form.email }}
+                        </div>
+                
+                        <div>
+                            <button type="submit" class="btn btn-light">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

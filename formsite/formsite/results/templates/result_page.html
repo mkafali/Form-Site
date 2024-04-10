@@ -1,0 +1,425 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% block content %}
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<div id="main_div" class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+                <h1>Results</h1>
+                <button id="manuel" name="manuel">General Results</button>
+                <button id="graphs" name="graphs">Graphs</button>
+                <button id="people" name="people">Answers of People</button>
+                <div id="results" name="results" style="margin-top: 20px;"></div>
+
+        </div>
+    </div>
+    <div style="margin-bottom: 200px;"></div>
+</div>
+
+<script>
+function preventDefaultFunction(event) {
+    // Default davranışı durdurma
+    event.preventDefault();
+}
+document.addEventListener('DOMContentLoaded', function() {
+   document.getElementById("manuel").addEventListener("click", function(event){
+        var control = document.querySelector('#new_element_1')
+        if(!control){
+        var div = document.getElementById("results");
+        var children = div.querySelectorAll("*");
+        children.forEach(function(child) {
+        child.parentNode.removeChild(child)});
+        fetch("/get_answers/" + "{{form.author}}" + "/" + "{{form.slug}}" + "/")  // Django'ya istek gönder
+        .then(response => response.json())  // JSON formatında gelen yanıtı işle
+        .then(data => {
+            // Veriyi işleme
+            // Örnek olarak, veriyi #results div'ine yazdırma
+            //console.log(data)
+            var attention = document.createElement('div');
+            attention.style.marginTop = "10px";
+            var attention_h = document.createElement('h5')
+            attention_h.innerText = "These are not Optional Questions!!!"
+            attention.appendChild(attention_h)
+            document.getElementById("results").appendChild(attention);
+            
+            for(var i=0; i<data.length; i++){
+                //console.log(data[i])
+                if(data[i]!="Rank" && data[i]!="none"){
+                var newElement = document.createElement('div'); // Yeni div oluştur
+                newElement.setAttribute('id', 'new_element_'+i)
+                if(i%3==1){
+                    var hr = document.createElement('hr');
+                    document.getElementById("results").appendChild(hr);
+                    newElement.innerText = "Results for Question " +  JSON.stringify(data[i]) + ":"; // Div içeriğine veriyi yaz
+                    
+                }
+                else{
+                    var total = 0;
+                    for(var key in data[i]){
+                        total += data[i][key];
+                    }
+
+                    for (var key in data[i]) {
+                        if (data[i].hasOwnProperty(key)) {
+                            var newExplanation = document.createElement('div'); // Yeni div oluştur
+                            newExplanation.setAttribute('id', 'new_element_'+key)
+                            var percantage = (data[i][key]*100)/total
+                            newExplanation.innerText =  key + " ----> " + data[i][key] + " Answer" + " (% " + percantage + " )";
+                            newElement.appendChild(newExplanation)
+                            //console.log(key + ': ' + data[i][key]);
+                        }
+                    }
+                    
+                }
+                document.getElementById("results").appendChild(newElement); 
+                }
+                else if(data[i]=="Rank"){
+                    var newElement = document.createElement('div'); // Yeni div oluştur
+                    newElement.setAttribute('id', 'new_element_'+(i+1))
+                    var hr = document.createElement('hr');
+                    document.getElementById("results").appendChild(hr);
+                    newElement.innerText = "Results for Question " +  JSON.stringify(data[i+1]) + ":"; // Div içeriğine veriyi yaz
+                    
+                
+                    //console.log(data[i+2])
+                    var unsortedArray = []
+                    var keys = []
+                    for (var key in data[i+2]) {
+                        if (data[i+2].hasOwnProperty(key)) {
+                            
+                            
+                            //console.log(key + ': ' + data[i+2][key]);
+                            keys.push(key)
+                            unsortedArray.push(data[i+2][key])
+                            //console.log(key)
+                        }
+                        
+                    }
+                    m = [...unsortedArray]
+                    var sorted_array = unsortedArray.sort(function(a, b) {
+                    return b - a; // Büyükten küçüğe sayısal sıralama
+                    });
+                    //console.log(m)
+                    //console.log(sorted_array)
+
+                    var used = []
+                    for(var z=0; z<sorted_array.length; z++){
+                        for(var n=0; n<m.length; n++){
+                            if(sorted_array[z] == m[n]){
+                                //console.log(n)
+                                if(used.includes(n)){
+                                    //console.log("jkdasjkc")
+                                }
+                                else{
+                                used.push(n)
+                                var newExplanation = document.createElement('div'); // Yeni div oluştur
+                                newExplanation.setAttribute('id', 'new_exp_'+(z+1))
+                                //console.log(keys)
+                                newExplanation.innerText = z+1 + ". " + keys[n];
+                                newElement.appendChild(newExplanation)
+                                break}
+                            }
+                        }
+                        
+                    }
+                    i += 2
+                    document.getElementById("results").appendChild(newElement); 
+                }
+               
+        }
+        /*
+        else{
+            for(var i=1; i<data.length; i++){
+                var newElement = document.createElement('div'); // Yeni div oluştur
+                newElement.setAttribute('id', 'new_element_'+i)
+                if(i%2!=0){
+                    var hr = document.createElement('hr');
+                    document.getElementById("results").appendChild(hr);
+                    newElement.innerText = "Results for Question " +  JSON.stringify(data[i]) + ":"; // Div içeriğine veriyi yaz
+                    
+                }
+                else{
+                    console.log("mehmet")
+                    var unsortedArray = []
+                    var keys = []
+                    for (var key in data[i]) {
+                        if (data[i].hasOwnProperty(key)) {
+                            
+                            
+                            console.log(key + ': ' + data[i][key]);
+                            keys.push(key)
+                            unsortedArray.push(data[i][key])
+                            console.log(key)
+                        }
+                        
+                    }
+                    m = [...unsortedArray]
+                    var sorted_array = unsortedArray.sort(function(a, b) {
+                    return b - a; // Büyükten küçüğe sayısal sıralama
+                    });
+                    console.log(m)
+                    console.log(sorted_array)
+
+                    var used = []
+                    for(var z=0; z<sorted_array.length; z++){
+                        for(var n=0; n<m.length; n++){
+                            if(sorted_array[z] == m[n]){
+                                console.log(n)
+                                if(used.includes(n)){
+                                    console.log("jkdasjkc")
+                                }
+                                else{
+                                used.push(n)
+                                var newExplanation = document.createElement('div'); // Yeni div oluştur
+                                newExplanation.setAttribute('id', 'new_exp_'+z)
+                                console.log(keys)
+                                newExplanation.innerText = z+1 + ". " + keys[n];
+                                newElement.appendChild(newExplanation)
+                                break}
+                            }
+                        }
+                        
+                    }
+
+                
+                    
+                }
+                document.getElementById("results").appendChild(newElement); 
+            }
+
+        }*/
+            //document.getElementById("results").innerText = JSON.stringify(data);
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    });
+    document.getElementById("people").addEventListener("click", function(event){
+        var controlElement = document.querySelector('#newPeople_1')
+        if(!controlElement){
+        var div = document.getElementById("results");
+        var children = div.querySelectorAll("*");
+        children.forEach(function(child) {
+        child.parentNode.removeChild(child);});
+        fetch("/get_who_answered/" + "{{form.author}}" + "/" + "{{form.slug}}" + "/")  // Django'ya istek gönder
+        .then(response => response.json())  // JSON formatında gelen yanıtı işle
+        .then(data => {
+            var control = 1;
+            for(var element in data){
+                //console.log(element)
+                var newPeople = document.createElement('div');
+                newPeople.setAttribute('id','newPeople_'+control)
+                var hr = document.createElement('hr');
+                newPeople.appendChild(hr)
+                var newButton = document.createElement('button');
+                newButton.setAttribute('id', 'newButton_'+control)
+                newButton.setAttribute('name', 'newButton_'+control)
+                //newButton.setAttribute('class', 'btn btn-primary')
+                newButton.setAttribute('type','button')
+                newButton.setAttribute('data-username', data[element]);
+                newButton.innerText = data[element];
+                newButton.style.marginBottom = "10px";
+                //newButton.style.marginTop = "5px";
+                
+                newPeople.appendChild(newButton)
+                
+                document.getElementById("results").appendChild(newPeople)
+
+                newButton.addEventListener('click', function() {
+                    var elementControl = this.parentNode
+                    var child = elementControl.querySelectorAll("*")
+                    if(child.length==2){
+                        var username = this.getAttribute('data-username');
+                        var form_author = "{{form.author}}";
+                        var form_slug = "{{form.slug}}";
+                        // AJAX isteği gönderme
+                        fetch("/get_user_answer/" + form_author + "/" + form_slug + "/" + username + "/")
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('Network response was not ok');
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                // İsteğe göre işlem yapma
+                                for(var i=0; i<data.length; i=i+3){
+                                    var marginDiv = document.createElement('div');
+                                    marginDiv.style.marginTop = "10px";
+                                    if(i!=0){
+                                        var hr = document.createElement('hr');
+                                        marginDiv.appendChild(hr)
+                                    }
+                                    var userAnswerDiv = document.createElement('div')
+                                    userAnswerDiv.setAttribute('id', 'userAnswerDiv_'+form_author+(i+1))
+                                    var userAnswerQsn = document.createElement('span')
+                                    userAnswerQsn.setAttribute('id', 'userAnswerQsn_'+form_author+(i+1))
+                                    userAnswerQsn.innerText = data[i] + ". "
+                                    var userAnswerQs = document.createElement('span')
+                                    userAnswerQs.setAttribute('id', 'userAnswerQs_'+form_author+(i+1))
+                                    userAnswerQs.innerText = data[i+1]
+                                    var userAnswerAns = document.createElement('div')
+                                    userAnswerAns.setAttribute('id', 'userAnswerAns_'+form_author+(i+1))
+                                    try{
+                                        var parsed = JSON.parse(data[i+2])
+                                        if(parsed[0]=="multi"){
+                                        for(var q=1; q<parsed.length; q++){
+                                            var newMultiAns = document.createElement('div')
+                                            newMultiAns.setAttribute('id','newMultiAns_'+q)
+                                            newMultiAns.innerText = "-" + parsed[q]
+                                            userAnswerAns.appendChild(newMultiAns)
+
+                                        }
+                                    }
+                                    else{
+                                        for(var q=1; q<parsed.length; q++){
+                                            var newMultiAns = document.createElement('div')
+                                            newMultiAns.setAttribute('id','newMultiAns_'+q)
+                                            newMultiAns.innerText = q + "- " + parsed[q]
+                                            userAnswerAns.appendChild(newMultiAns)
+
+                                        }
+                                    }
+                                        userAnswerDiv.appendChild(marginDiv)
+                                    userAnswerDiv.appendChild(userAnswerQsn)
+                                    userAnswerDiv.appendChild(userAnswerQs)
+                                    userAnswerDiv.appendChild(userAnswerAns)
+
+                                    }
+                                    catch{
+                                    userAnswerAns.innerText = data[i+2]
+                                    userAnswerDiv.appendChild(marginDiv)
+                                    userAnswerDiv.appendChild(userAnswerQsn)
+                                    userAnswerDiv.appendChild(userAnswerQs)
+                                    userAnswerDiv.appendChild(userAnswerAns)
+                                    }
+
+
+
+                                    this.parentElement.appendChild(userAnswerDiv)
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                            });
+                        }
+                        else{
+                            for(var element in child){
+                                if(element>1){
+                                    child[element].remove()
+                                }
+                                
+                            }
+                        }
+                    });
+
+                control ++;
+                    
+            }
+        
+        })
+        .catch(error => console.error('Error:', error));
+
+    }
+    });
+    /////
+    document.getElementById("graphs").addEventListener("click", function(event) {
+    var controlElement = document.querySelectorAll('[id^="chartElement"]')
+    if (controlElement.length===0) {
+        var div = document.getElementById("results");
+        var children = div.querySelectorAll("*");
+        children.forEach(function(child) {
+        child.parentNode.removeChild(child);});
+        google.charts.load('current', {'packages':['corechart']});
+        google.charts.setOnLoadCallback(function() {
+            fetch("/get_answers/" + "{{form.author}}" + "/" + "{{form.slug}}" + "/") // Django'ya istek gönder
+                .then(response => response.json()) // JSON formatında gelen yanıtı işle
+                .then(data => {
+                    //console.log(data)
+                    var control = 1;
+                    for (var i = 0; i < data.length; i += 3) {
+                        if (data[i] == "none") {
+                            var qsNumber = data[i+1]
+                            var data_keys = []
+                            var data_values = []
+                            for (var key in data[i+2]) {
+                                if (data[i+2].hasOwnProperty(key)) {
+                                    data_keys.push(key)
+                                    data_values.push(data[i+2][key])
+                                    //console.log(key + ": " + data[i+2][key]);
+                                }
+                            }
+                            //console.log(data[i + 2]);
+                            //console.log(data_keys)
+                            //console.log(data_values)
+                            drawChart(qsNumber,data_keys,data_values); // Grafik oluştur
+                            drawPieChart(qsNumber, data_keys, data_values);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    }
+});
+
+function drawChart(number,keys,values) {
+    var chartElement = document.createElement('div')
+    chartElement.setAttribute('id','chartElement_'+number)
+    document.getElementById('results').appendChild(chartElement)
+    //console.log(number)
+    // Veri kümesi
+    var googleVeri = [];
+
+    // İlk satırı veri dizisine eklemek (başlık)
+    googleVeri.push(['Category', 'Value']); 
+
+    // keys ve values dizilerini döngüyle işleyerek Google Charts için uygun formata dönüştürmek
+    for (var i = 0; i < keys.length; i++) {
+        // Her bir keys ve values elemanını al ve googleVeri dizisine ekleyerek bir dizi olarak ekleyin
+        googleVeri.push([keys[i], values[i]]);
+    }
+
+    var data = google.visualization.arrayToDataTable(googleVeri);
+    var options = {
+      title: 'Results for question '+number,
+      legend: { position: 'none' },
+    };
+    // Grafik oluştur
+    var chart = new google.visualization.ColumnChart(chartElement);
+    
+    chart.draw(data,options);
+}
+function drawPieChart(number, keys, values) {
+    var chartElement = document.createElement('div');
+    chartElement.setAttribute('id', 'ChartElement_' + number + "_" + 1);
+    document.getElementById('results').appendChild(chartElement);
+    //console.log(number);
+
+    var googleVeri = [];
+    googleVeri.push(['Category', 'Value']);
+
+    for (var i = 0; i < keys.length; i++) {
+        googleVeri.push([keys[i], values[i]]);
+    }
+
+    var data = google.visualization.arrayToDataTable(googleVeri);
+    var options = {
+        title: 'Results for question ' + number,
+    };
+
+    var chart = new google.visualization.PieChart(chartElement);
+    chart.draw(data, options);
+    var hr = document.createElement('hr')
+    chartElement.appendChild(hr)
+}
+    
+    
+
+
+});
+
+
+
+</script>
+
+
+
+{% endblock %}

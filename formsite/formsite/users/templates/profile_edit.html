@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <br/>
+            {% if messages %}
+                {% if not user.is_authenticated %}
+                    {% for message in messages %}
+                    <div class="alert alert-warning" role="alert">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endif %}
+            
+            <form method="POST" action="{% url 'edit_profile' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="card text-bg-secondary border-light mb-3">
+                    <h1 class="card-header text-center">EDIT PROFILE</h1>
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <ul>
+                                    {% for field, error_list in form.errors.items %}
+                                        {% for error in error_list %}
+                                            <li>{{ field|title }}: {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        {% if profile.photo %}
+                        <h1 class="text-center">CURRENT PROFILE PHOTO</h1>
+                        <div class="card mx-auto" style="width: 18rem;">
+                            <img src="{{profile.photo.url}}" class="card-img-top" alt="Current Photo">
+                        </div>
+                        <div class="mb-3 text-center">
+                            <input type="checkbox" name="photo-clear" id="photo-clear_id">
+                            <label for="photo-clear_id">DELETE Photo</label>
+                        </div>
+                        <hr/>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label class="form-label">SELECT/CHANGE PHOTO</label>
+                            <input type="file" name="photo" accept="image/*" id="id_photo">
+                        </div>
+                        <hr/>
+                        <label class="form-label">BIO: </label>
+                        <div class="mb-3">
+                            {{ form.bio }}
+                        </div>
+                        <hr/>
+                        <div>
+                            <button type="submit" class="btn btn-light">SAVE</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
